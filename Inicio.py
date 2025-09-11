@@ -8,12 +8,9 @@ from nltk.stem import SnowballStemmer
 st.title("🔍 Demo TF-IDF en Español")
 
 # Documentos de ejemplo
-default_docs = """El perro ladra fuerte en el parque.
-El gato maúlla suavemente durante la noche.
-El perro y el gato juegan juntos en el jardín.
-Los niños corren y se divierten en el parque.
-La música suena muy alta en la fiesta.
-Los pájaros cantan hermosas melodías al amanecer."""
+default_docs = """La lluvia caía sobre el pueblo vacío. Entre las calles empedradas, una niña avanzaba con una linterna apagada. Buscaba la casa donde, según su abuela, vivía el relojero que podía reparar el tiempo.
+Cuando finalmente lo encontró, el anciano le pidió su reloj. Ella no llevaba ninguno; en cambio, le ofreció un retrato roto de su familia. El hombre sonrió, lo colocó dentro de una esfera de cristal y lo agitó suavemente.
+Al instante, el viento cambió de dirección y, en cada ventana, la niña vio reflejadas las escenas de su pasado. Una por una, como si el tiempo hubiera sido en verdad reparado.."""
 
 # Stemmer en español
 stemmer = SnowballStemmer("spanish")
@@ -41,23 +38,23 @@ with col2:
     
     # NUEVAS preguntas optimizadas para mayor similitud
     if st.button("¿Dónde juegan el perro y el gato?", use_container_width=True):
-        st.session_state.question = "¿Dónde juegan el perro y el gato?"
+        st.session_state.question = "¿Por qué la niña buscaba al relojero que podía reparar el tiempo?"
         st.rerun()
     
     if st.button("¿Qué hacen los niños en el parque?", use_container_width=True):
-        st.session_state.question = "¿Qué hacen los niños en el parque?"
+        st.session_state.question = "¿Qué significado tiene la linterna apagada que lleva?"
         st.rerun()
         
     if st.button("¿Cuándo cantan los pájaros?", use_container_width=True):
-        st.session_state.question = "¿Cuándo cantan los pájaros?"
+        st.session_state.question = "¿Por qué crees que el relojero sonríe cuando ella le da el retrato roto?"
         st.rerun()
         
     if st.button("¿Dónde suena la música alta?", use_container_width=True):
-        st.session_state.question = "¿Dónde suena la música alta?"
+        st.session_state.question = "¿Qué podría pasar después de que la niña ve las escenas de su pasado?"
         st.rerun()
         
     if st.button("¿Qué animal maúlla durante la noche?", use_container_width=True):
-        st.session_state.question = "¿Qué animal maúlla durante la noche?"
+        st.session_state.question = "¿Qué enseñanza deja esta historia?"
         st.rerun()
 
 # Actualizar pregunta si se seleccionó una sugerida
