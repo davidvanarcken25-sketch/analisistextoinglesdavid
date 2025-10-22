@@ -4,105 +4,90 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import re
 from nltk.stem import SnowballStemmer
-from streamlit_drawable_canvas import st_canvas
 
-st.title("📚 + 🎨 App Demo: Texto y Dibujo")
+st.title("Demo de TF-IDF con Preguntas y Respuestas")
 
-# Pestañas
-tab1, tab2 = st.tabs(["🔍 TF-IDF", "🎨 Lienzo de dibujo"])
+st.write("""
+Cada línea se trata como un **documento** (puede ser una frase, un párrafo o un texto más largo).  
+⚠️ Los documentos y las preguntas deben estar en **inglés**, ya que el análisis está configurado para ese idioma.  
 
-# ---------------- TAB 1: TF-IDF ----------------
-with tab1:
-    # Documentos de ejemplo
-    default_docs = """La lluvia caía sobre el pueblo vacío. Entre las calles empedradas, una niña avanzaba con una linterna apagada. Buscaba la casa donde, según su abuela, vivía el relojero que podía reparar el tiempo.
-    Cuando finalmente lo encontró, el anciano le pidió su reloj. Ella no llevaba ninguno; en cambio, le ofreció un retrato roto de su familia. El hombre sonrió, lo colocó dentro de una esfera de cristal y lo agitó suavemente.
-    Al instante, el viento cambió de dirección y, en cada ventana, la niña vio reflejadas las escenas de su pasado. Una por una, como si el tiempo hubiera sido en verdad reparado.."""
+La aplicación aplica normalización y *stemming* para que palabras como *playing* y *play* se consideren equivalentes.
+""")
 
-    # Stemmer en español
-    stemmer = SnowballStemmer("spanish")
+# Ejemplo inicial en inglés
+text_input = st.text_area(
+    "Escribe tus documentos (uno por línea, en inglés):",
+    "The dog barks loudly.\nThe cat meows at night.\nThe dog and the cat play together."
+)
 
-    def tokenize_and_stem(text):
-        text = text.lower()
-        text = re.sub(r'[^a-záéíóúüñ\s]', ' ', text)
-        tokens = [t for t in text.split() if len(t) > 1]
-        stems = [stemmer.stem(t) for t in tokens]
-        return stems
+question = st.text_input("Escribe una pregunta (en inglés):", "Who is playing?")
 
-    col1, col2 = st.columns([2, 1])
+# Inicializar stemmer para inglés
+stemmer = SnowballStemmer("english")
 
-    with col1:
-        text_input = st.text_area("📝 Documentos (uno por línea):", default_docs, height=150)
-        question = st.text_input("❓ Escribe tu pregunta:", "¿Dónde juegan el perro y el gato?")
+def tokenize_and_stem(text: str):
+    # Pasar a minúsculas
+    text = text.lower()
+    # Eliminar caracteres no alfabéticos
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    # Tokenizar (palabras con longitud > 1)
+    tokens = [t for t in text.split() if len(t) > 1]
+    # Aplicar stemming
+    stems = [stemmer.stem(t) for t in tokens]
+    return stems
 
-    with col2:
-        st.markdown("### 💡 Preguntas sugeridas:")
-        if st.button("¿Por qué la niña buscaba al relojero?", use_container_width=True):
-            st.session_state.question = "¿Por qué la niña buscaba al relojero que podía reparar el tiempo?"
-            st.rerun()
-        if st.button("¿Qué significa la linterna apagada?", use_container_width=True):
-            st.session_state.question = "¿Qué significado tiene la linterna apagada que lleva?"
-            st.rerun()
-        if st.button("¿Por qué sonríe el relojero?", use_container_width=True):
-            st.session_state.question = "¿Por qué crees que el relojero sonríe cuando ella le da el retrato roto?"
-            st.rerun()
+if st.button("Calcular TF-IDF y buscar respuesta"):
+    documents = [d.strip() for d in text_input.split("\n") if d.strip()]
+    if len(documents) < 1:
+        st.warning("⚠️ Ingresa al menos un documento.")
+    else:
+        # Vectorizador con stemming
+        vectorizer = TfidfVectorizer(
+            tokenizer=tokenize_and_stem,
+            stop_words="english",
+            token_pattern=None
+        )
 
-    if 'question' in st.session_state:
-        question = st.session_state.question
+        # Ajustar con documentos
+        X = vectorizer.fit_transform(documents)
 
-    if st.button("🔍 Analizar", type="primary"):
-        documents = [d.strip() for d in text_input.split("\n") if d.strip()]
-        if len(documents) < 1:
-            st.error("⚠️ Ingresa al menos un documento.")
-        elif not question.strip():
-            st.error("⚠️ Escribe una pregunta.")
-        else:
-            vectorizer = TfidfVectorizer(tokenizer=tokenize_and_stem, min_df=1)
-            X = vectorizer.fit_transform(documents)
-            st.markdown("### 📊 Matriz TF-IDF")
-            df_tfidf = pd.DataFrame(
-                X.toarray(),
-                columns=vectorizer.get_feature_names_out(),
-                index=[f"Doc {i+1}" for i in range(len(documents))]
-            )
-            st.dataframe(df_tfidf.round(3), use_container_width=True)
+        # Mostrar matriz TF-IDF
+        df_tfidf = pd.DataFrame(
+            X.toarray(),
+            columns=vectorizer.get_feature_names_out(),
+            index=[f"Doc {i+1}" for i in range(len(documents))]
+        )
 
-            question_vec = vectorizer.transform([question])
-            similarities = cosine_similarity(question_vec, X).flatten()
+        st.write("### Matriz TF-IDF (stems)")
+        st.dataframe(df_tfidf.round(3))
 
-            best_idx = similarities.argmax()
-            best_doc = documents[best_idx]
-            best_score = similarities[best_idx]
+        # Vector de la pregunta
+        question_vec = vectorizer.transform([question])
 
-            st.markdown("### 🎯 Respuesta")
-            st.markdown(f"**Tu pregunta:** {question}")
-            if best_score > 0.01:
-                st.success(f"**Respuesta:** {best_doc}")
-                st.info(f"📈 Similitud: {best_score:.3f}")
-            else:
-                st.warning(f"**Respuesta (baja confianza):** {best_doc}")
-                st.info(f"📉 Similitud: {best_score:.3f}")
+        # Similitud coseno
+        similarities = cosine_similarity(question_vec, X).flatten()
 
-# ---------------- TAB 2: Lienzo de dibujo ----------------
-with tab2:
-    st.subheader("Dibuja aquí 👇")
+        # Documento más parecido
+        best_idx = similarities.argmax()
+        best_doc = documents[best_idx]
+        best_score = similarities[best_idx]
 
-    brush_color = st.color_picker("🎨 Elige el color del pincel", "#000000")
-    stroke_width = st.slider("✏️ Grosor del pincel", 1, 25, 3)
-    shapes = ["freedraw", "line", "rect", "circle", "transform"]
-    shape = st.selectbox("🔲 Forma predeterminada:", shapes)
+        st.write("### Pregunta y respuesta")
+        st.write(f"**Tu pregunta:** {question}")
+        st.write(f"**Documento más relevante (Doc {best_idx+1}):** {best_doc}")
+        st.write(f"**Puntaje de similitud:** {best_score:.3f}")
 
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 255, 255, 0.3)",
-        stroke_width=stroke_width,
-        stroke_color=brush_color,
-        background_color="#eee",
-        update_streamlit=True,
-        height=400,
-        width=600,
-        drawing_mode=shape,
-        key="canvas"
-    )
+        # Mostrar todas las similitudes
+        sim_df = pd.DataFrame({
+            "Documento": [f"Doc {i+1}" for i in range(len(documents))],
+            "Texto": documents,
+            "Similitud": similarities
+        })
+        st.write("### Puntajes de similitud (ordenados)")
+        st.dataframe(sim_df.sort_values("Similitud", ascending=False))
 
-    if canvas_result.image_data is not None:
-        st.image(canvas_result.image_data, caption="🖼️ Tu dibujo", use_container_width=True)
-
+        # Mostrar coincidencias de stems
+        vocab = vectorizer.get_feature_names_out()
+        q_stems = tokenize_and_stem(question)
+        matched = [s for s in q_stems if s in vocab and df_tfidf.iloc[best_idx].get(s, 0) > 0]
+        st.write("### Stems de la pregunta presentes en el documento elegido:", matched)
