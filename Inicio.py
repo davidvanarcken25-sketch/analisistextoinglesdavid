@@ -4,45 +4,47 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import re
 from nltk.stem import SnowballStemmer
+from PIL import Image
 
 # ========================
 # CONFIGURACIÓN DE PÁGINA
 # ========================
 st.set_page_config(
-    page_title="🔎 Detective Semántico: Buscador Inteligente TF-IDF",
-    page_icon="🕵️‍♀️",
+    page_title="Análisis de texto (inglés) – El Detective Semántico",
+    page_icon="🕵️",
     layout="centered"
 )
 
 # ========================
-# ENCABEZADO Y ESTILO
+# CABECERA Y ESTILO
 # ========================
+# Cargar imagen temática
+image = Image.open("detective_banner.jpg")  # ← Asegúrate de tener una imagen con ese nombre en la carpeta del proyecto
+st.image(image, use_container_width=True)
+
 st.markdown("""
 <div style='text-align:center;'>
-    <h1 style='color:#4B0082;'>🕵️‍♀️ Detective Semántico</h1>
-    <h3 style='color:#9370DB;'>Encuentra las pistas ocultas entre tus palabras con TF-IDF</h3>
+    <h1 style='color:#2F2F4F;'>Análisis de texto (inglés)</h1>
+    <h3 style='color:#5A5A8F;'>El Detective Semántico</h3>
+    <p style='color:#666; font-size:16px;'>
+        Explora la relación entre tus textos y una pregunta usando el modelo TF-IDF.
+        Cada línea de texto se considera un documento, y el detective semántico investigará
+        cuál contiene la respuesta más relevante según su similitud semántica.
+    </p>
 </div>
 """, unsafe_allow_html=True)
-
-st.write("""
-**Detective Semántico** te ayuda a encontrar el texto más relevante entre tus documentos.  
-Cada línea que escribas será analizada como una pista 📜, y tu pregunta será la clave 🗝️  
-para descubrir qué texto tiene la información más relacionada.
-
-> 🗣️ *Por ahora solo funciona en inglés para aprovechar el análisis lingüístico completo.*
-""")
 
 # ========================
 # ENTRADA DE DATOS
 # ========================
-st.markdown("### 📚 Ingresa tus documentos:")
+st.markdown("#### Documentos a analizar (en inglés)")
 text_input = st.text_area(
-    "Cada línea es un documento independiente:",
+    "Cada línea será tratada como un documento independiente:",
     "The dog barks loudly.\nThe cat meows at night.\nThe dog and the cat play together.",
     height=150
 )
 
-st.markdown("### ❓ Ingresa tu pregunta:")
+st.markdown("#### Pregunta a investigar (en inglés)")
 question = st.text_input("Ejemplo:", "Who is playing?")
 
 # Inicializar stemmer
@@ -58,13 +60,13 @@ def tokenize_and_stem(text: str):
 # ========================
 # ANÁLISIS
 # ========================
-if st.button("🔍 Analizar y buscar respuesta"):
+if st.button("Iniciar análisis"):
     documents = [d.strip() for d in text_input.split("\n") if d.strip()]
 
     if len(documents) < 1:
-        st.warning("⚠️ Ingresa al menos un documento para analizar.")
+        st.warning("Por favor, ingresa al menos un documento para analizar.")
     else:
-        with st.spinner("El detective está revisando tus documentos... 🕵️‍♀️"):
+        with st.spinner("El detective está revisando tus documentos..."):
             vectorizer = TfidfVectorizer(
                 tokenizer=tokenize_and_stem,
                 stop_words="english",
@@ -77,10 +79,10 @@ if st.button("🔍 Analizar y buscar respuesta"):
             df_tfidf = pd.DataFrame(
                 X.toarray(),
                 columns=vectorizer.get_feature_names_out(),
-                index=[f"Doc {i+1}" for i in range(len(documents))]
+                index=[f"Documento {i+1}" for i in range(len(documents))]
             )
 
-            st.markdown("### 🧮 Matriz TF-IDF")
+            st.markdown("### Matriz TF-IDF")
             st.dataframe(df_tfidf.round(3))
 
             # Calcular similitud coseno
@@ -92,23 +94,23 @@ if st.button("🔍 Analizar y buscar respuesta"):
             best_score = similarities[best_idx]
 
             st.markdown("---")
-            st.markdown("### 🧠 Resultado del análisis")
+            st.markdown("### Resultados del análisis")
 
             st.success(f"""
-            **Pregunta:** {question}  
-            **Documento más relevante:** Doc {best_idx+1}  
-            **Texto:** *"{best_doc}"*  
-            **Similitud:** {best_score:.3f}
+            **Pregunta analizada:** {question}  
+            **Documento más relevante:** Documento {best_idx+1}  
+            **Texto:** "{best_doc}"  
+            **Nivel de similitud:** {best_score:.3f}
             """)
 
             # Mostrar tabla de similitud
             sim_df = pd.DataFrame({
-                "Documento": [f"Doc {i+1}" for i in range(len(documents))],
+                "Documento": [f"Documento {i+1}" for i in range(len(documents))],
                 "Texto": documents,
                 "Similitud": similarities
             }).sort_values("Similitud", ascending=False)
 
-            st.markdown("### 📊 Ranking de similitud entre documentos")
+            st.markdown("### Ranking de similitud entre documentos")
             st.dataframe(sim_df)
 
             # Mostrar coincidencias de stems
@@ -117,7 +119,7 @@ if st.button("🔍 Analizar y buscar respuesta"):
             matched = [s for s in q_stems if s in vocab and df_tfidf.iloc[best_idx].get(s, 0) > 0]
 
             if matched:
-                st.markdown("### 🧩 Pistas encontradas (stems coincidentes)")
+                st.markdown("### Palabras base coincidentes (stems encontrados)")
                 st.write(", ".join(matched))
             else:
                 st.info("No se encontraron coincidencias directas de palabras base.")
@@ -127,8 +129,8 @@ if st.button("🔍 Analizar y buscar respuesta"):
 # ========================
 st.markdown("""
 <hr>
-<div style='text-align:center; color:gray;'>
-Hecho con 🧠 + 💜 por un curioso detective de palabras.
+<div style='text-align:center; color:gray; font-size:14px;'>
+Proyecto de análisis semántico TF-IDF · El Detective Semántico · Versión demostrativa
 </div>
 """, unsafe_allow_html=True)
 
