@@ -11,17 +11,12 @@ from PIL import Image
 # ========================
 st.set_page_config(
     page_title="Análisis de texto (inglés) – El Detective Semántico",
-    page_icon="🕵️",
     layout="centered"
 )
 
 # ========================
 # CABECERA Y ESTILO
 # ========================
-# Cargar imagen temática
-image = Image.open("detective_banner.jpg")  # ← Asegúrate de tener una imagen con ese nombre en la carpeta del proyecto
-st.image(image, use_container_width=True)
-
 st.markdown("""
 <div style='text-align:center;'>
     <h1 style='color:#2F2F4F;'>Análisis de texto (inglés)</h1>
@@ -33,6 +28,13 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
+# Imagen decorativa (más pequeña y debajo del título)
+try:
+    image = Image.open("detective_banner.jpg")  # Asegúrate de tener esta imagen en la carpeta del proyecto
+    st.image(image, width=300, caption="El Detective Semántico en acción", use_container_width=False)
+except Exception:
+    st.info("Puedes agregar una imagen llamada 'detective_banner.jpg' para decorar la app.")
 
 # ========================
 # ENTRADA DE DATOS
