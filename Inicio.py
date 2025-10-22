@@ -5,89 +5,130 @@ import pandas as pd
 import re
 from nltk.stem import SnowballStemmer
 
-st.title("Demo de TF-IDF con Preguntas y Respuestas")
-
-st.write("""
-Cada línea se trata como un **documento** (puede ser una frase, un párrafo o un texto más largo).  
-⚠️ Los documentos y las preguntas deben estar en **inglés**, ya que el análisis está configurado para ese idioma.  
-
-La aplicación aplica normalización y *stemming* para que palabras como *playing* y *play* se consideren equivalentes.
-""")
-
-# Ejemplo inicial en inglés
-text_input = st.text_area(
-    "Escribe tus documentos (uno por línea, en inglés):",
-    "The dog barks loudly.\nThe cat meows at night.\nThe dog and the cat play together."
+# ========================
+# CONFIGURACIÓN DE PÁGINA
+# ========================
+st.set_page_config(
+    page_title="🔎 Detective Semántico: Buscador Inteligente TF-IDF",
+    page_icon="🕵️‍♀️",
+    layout="centered"
 )
 
-question = st.text_input("Escribe una pregunta (en inglés):", "Who is playing?")
+# ========================
+# ENCABEZADO Y ESTILO
+# ========================
+st.markdown("""
+<div style='text-align:center;'>
+    <h1 style='color:#4B0082;'>🕵️‍♀️ Detective Semántico</h1>
+    <h3 style='color:#9370DB;'>Encuentra las pistas ocultas entre tus palabras con TF-IDF</h3>
+</div>
+""", unsafe_allow_html=True)
 
-# Inicializar stemmer para inglés
+st.write("""
+**Detective Semántico** te ayuda a encontrar el texto más relevante entre tus documentos.  
+Cada línea que escribas será analizada como una pista 📜, y tu pregunta será la clave 🗝️  
+para descubrir qué texto tiene la información más relacionada.
+
+> 🗣️ *Por ahora solo funciona en inglés para aprovechar el análisis lingüístico completo.*
+""")
+
+# ========================
+# ENTRADA DE DATOS
+# ========================
+st.markdown("### 📚 Ingresa tus documentos:")
+text_input = st.text_area(
+    "Cada línea es un documento independiente:",
+    "The dog barks loudly.\nThe cat meows at night.\nThe dog and the cat play together.",
+    height=150
+)
+
+st.markdown("### ❓ Ingresa tu pregunta:")
+question = st.text_input("Ejemplo:", "Who is playing?")
+
+# Inicializar stemmer
 stemmer = SnowballStemmer("english")
 
 def tokenize_and_stem(text: str):
-    # Pasar a minúsculas
     text = text.lower()
-    # Eliminar caracteres no alfabéticos
     text = re.sub(r'[^a-z\s]', ' ', text)
-    # Tokenizar (palabras con longitud > 1)
     tokens = [t for t in text.split() if len(t) > 1]
-    # Aplicar stemming
     stems = [stemmer.stem(t) for t in tokens]
     return stems
 
-if st.button("Calcular TF-IDF y buscar respuesta"):
+# ========================
+# ANÁLISIS
+# ========================
+if st.button("🔍 Analizar y buscar respuesta"):
     documents = [d.strip() for d in text_input.split("\n") if d.strip()]
+
     if len(documents) < 1:
-        st.warning("⚠️ Ingresa al menos un documento.")
+        st.warning("⚠️ Ingresa al menos un documento para analizar.")
     else:
-        # Vectorizador con stemming
-        vectorizer = TfidfVectorizer(
-            tokenizer=tokenize_and_stem,
-            stop_words="english",
-            token_pattern=None
-        )
+        with st.spinner("El detective está revisando tus documentos... 🕵️‍♀️"):
+            vectorizer = TfidfVectorizer(
+                tokenizer=tokenize_and_stem,
+                stop_words="english",
+                token_pattern=None
+            )
 
-        # Ajustar con documentos
-        X = vectorizer.fit_transform(documents)
+            X = vectorizer.fit_transform(documents)
 
-        # Mostrar matriz TF-IDF
-        df_tfidf = pd.DataFrame(
-            X.toarray(),
-            columns=vectorizer.get_feature_names_out(),
-            index=[f"Doc {i+1}" for i in range(len(documents))]
-        )
+            # Crear DataFrame TF-IDF
+            df_tfidf = pd.DataFrame(
+                X.toarray(),
+                columns=vectorizer.get_feature_names_out(),
+                index=[f"Doc {i+1}" for i in range(len(documents))]
+            )
 
-        st.write("### Matriz TF-IDF (stems)")
-        st.dataframe(df_tfidf.round(3))
+            st.markdown("### 🧮 Matriz TF-IDF")
+            st.dataframe(df_tfidf.round(3))
 
-        # Vector de la pregunta
-        question_vec = vectorizer.transform([question])
+            # Calcular similitud coseno
+            question_vec = vectorizer.transform([question])
+            similarities = cosine_similarity(question_vec, X).flatten()
 
-        # Similitud coseno
-        similarities = cosine_similarity(question_vec, X).flatten()
+            best_idx = similarities.argmax()
+            best_doc = documents[best_idx]
+            best_score = similarities[best_idx]
 
-        # Documento más parecido
-        best_idx = similarities.argmax()
-        best_doc = documents[best_idx]
-        best_score = similarities[best_idx]
+            st.markdown("---")
+            st.markdown("### 🧠 Resultado del análisis")
 
-        st.write("### Pregunta y respuesta")
-        st.write(f"**Tu pregunta:** {question}")
-        st.write(f"**Documento más relevante (Doc {best_idx+1}):** {best_doc}")
-        st.write(f"**Puntaje de similitud:** {best_score:.3f}")
+            st.success(f"""
+            **Pregunta:** {question}  
+            **Documento más relevante:** Doc {best_idx+1}  
+            **Texto:** *"{best_doc}"*  
+            **Similitud:** {best_score:.3f}
+            """)
 
-        # Mostrar todas las similitudes
-        sim_df = pd.DataFrame({
-            "Documento": [f"Doc {i+1}" for i in range(len(documents))],
-            "Texto": documents,
-            "Similitud": similarities
-        })
-        st.write("### Puntajes de similitud (ordenados)")
-        st.dataframe(sim_df.sort_values("Similitud", ascending=False))
+            # Mostrar tabla de similitud
+            sim_df = pd.DataFrame({
+                "Documento": [f"Doc {i+1}" for i in range(len(documents))],
+                "Texto": documents,
+                "Similitud": similarities
+            }).sort_values("Similitud", ascending=False)
 
-        # Mostrar coincidencias de stems
-        vocab = vectorizer.get_feature_names_out()
-        q_stems = tokenize_and_stem(question)
-        matched = [s for s in q_stems if s in vocab and df_tfidf.iloc[best_idx].get(s, 0) > 0]
-        st.write("### Stems de la pregunta presentes en el documento elegido:", matched)
+            st.markdown("### 📊 Ranking de similitud entre documentos")
+            st.dataframe(sim_df)
+
+            # Mostrar coincidencias de stems
+            vocab = vectorizer.get_feature_names_out()
+            q_stems = tokenize_and_stem(question)
+            matched = [s for s in q_stems if s in vocab and df_tfidf.iloc[best_idx].get(s, 0) > 0]
+
+            if matched:
+                st.markdown("### 🧩 Pistas encontradas (stems coincidentes)")
+                st.write(", ".join(matched))
+            else:
+                st.info("No se encontraron coincidencias directas de palabras base.")
+
+# ========================
+# PIE DE PÁGINA
+# ========================
+st.markdown("""
+<hr>
+<div style='text-align:center; color:gray;'>
+Hecho con 🧠 + 💜 por un curioso detective de palabras.
+</div>
+""", unsafe_allow_html=True)
+
