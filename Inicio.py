@@ -32,7 +32,7 @@ st.markdown("""
 
 # Imagen decorativa
 try:
-    image = Image.open("chef_banner.jpeg")  # Puedes agregar una imagen con este nombre
+    image = Image.open("chef_banner.jpg")  # Puedes agregar una imagen con este nombre
     st.image(image, width=350, caption="El Crítico Gastronómico en acción", use_container_width=False)
 except Exception:
     st.info("Puedes agregar una imagen llamada 'chef_banner.jpg' para decorar la app.")
